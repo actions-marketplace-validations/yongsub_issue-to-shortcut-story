@@ -150,19 +150,19 @@ if __name__ == "__main__":
 
     print(story)
 
-    # r = sc.create_story(story)
+    r = sc.create_story(story)
 
-    # try:
-    #     r.raise_for_status()
+    try:
+        r.raise_for_status()
 
-    #     story_id = r.json()["id"]
+        story_id = r.json()["id"]
 
-    #     print(f">>> Story {story_id} is created.")
+        print(f">>> Story {story_id} is created.")
 
-    # except requests.exceptions.HTTPError as ex:
-    #     print(ex)
-    #     # if not 200
-    #     print(r.status_code)
-    #     print(r.json())
-    #     print("Story creation failed.")
-    #     sys.exit(1)
+    except requests.exceptions.HTTPError as ex:
+        print(ex)
+        # if not 200
+        print(r.status_code)
+        print(r.json())
+        print("Story creation failed.")
+        sys.exit(1)
