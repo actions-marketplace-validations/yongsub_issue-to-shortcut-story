@@ -1,0 +1,33 @@
+name: 'issue to shortcut story action'
+description: "shortcut story created when github issue is created"
+inputs:
+  github_token:
+    description: "github token"
+    required: true
+  github_repo_name:
+    description: "github repo name (owner/repo)"
+    required: true
+  github_issue_number:
+    description: "number of the issue created"
+    required: true
+  shortcut_api_token:
+    description: "shortcut api token"
+    required: true
+  shortcut_default_user_name:
+    description: "shortcut user name for `requested by` of a story"
+    required: true
+  shortcut_workflow:
+    description: "shortcut workflow name that story is created"
+    required: true
+  shortcut_group:
+    description: "shortcut team responsible for story"
+    required: false
+  shortcut_project:
+    description: "shortcut project that story belongs"
+    required: false
+  gh_sc_user_map:
+    description: "map of github user to shortcut user"
+    required: false
+runs:
+  using: "docker"
+  image: "Dockerfile"
