@@ -69,10 +69,11 @@ def get_issue(gh_issue_num, gh_repo_name, gh_token):
 
 def parse_to_user_map(gh_sc_user_map_str):
     try:
-        user_map = dict([
-            pair.strip().split(":")
-            for pair in gh_sc_user_map_str.split(",")
-        ])
+        mappings = gh_sc_user_map_str.split(",")
+        mappings = [m.strip() for m in mappings]
+        mappings = [m for m in mappings if m != ""]
+
+        user_map = dict([pair.split(":") for pair in mappings])
     except Exception:
         print(">>> Parsing gh_sc_user_map failed.")
         user_map = None
