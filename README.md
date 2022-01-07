@@ -56,6 +56,8 @@ jobs:
         - Format: `"gh_user1:sc_user1, gh_user2:sc_user2"`
             - Comma (,) separates mapping items and colon (:) separates a key-value pair.
             - No space is allowed before and after colon (:).
+        - "name", "mention name", and "email address" can be used to specify Shortcut user.
+          - Recommended to use "email address" because the others are editable in Shortcut.
     - If specified, the Shortcut user corresponding to the Github user who created the issue will be "Requester" of the story.
     - If not specified, `shortcut_default_user_name` will be "Requester".
 
