@@ -23,18 +23,13 @@ class Setting(BaseSettings):
     gh_sc_user_map: Optional[str] = Field(env="INPUT_GH_SC_USER_MAP")
 
 
-def determine_workflow_state(sc, workflow_name, issue_labels):
+def determine_workflow_state(sc, workflow_name):
     workflow = sc.get_workflow(workflow_name)
 
-    if workflow is None:
-        raise ValueError(f"Workflow {workflow_name} does not exist.")
+    assert workflow is not None, f"Workflow {workflow_name} does not exist."
+    assert len(workflow["states"]) > 0, f"Workflow {workflow_name} has no state."
 
-    match_states = [wf_state for wf_state in workflow["states"] if wf_state["name"] in issue_labels]
-
-    if len(match_states) > 0:
-        target_state = match_states[0]
-    else:
-        target_state = workflow["states"][0]
+    target_state = workflow["states"][0]
 
     return target_state
 
@@ -53,8 +48,6 @@ def get_issue(gh_issue_num, gh_repo_name, gh_token):
 
     try:
         res.raise_for_status()
-
-        html_url = res.json()["html_url"]
 
     except requests.exceptions.HTTPError as ex:
         print(ex)
@@ -121,9 +114,8 @@ if __name__ == "__main__":
     sc = Shortcut(setting.sc_api_token)
 
     issue = get_issue(setting.gh_issue_num, setting.gh_repo_name, setting.gh_token)
-    issue_labels = [lb["name"] for lb in issue["labels"]]
 
-    workflow_state = determine_workflow_state(sc, setting.sc_workflow, issue_labels)
+    workflow_state = determine_workflow_state(sc, setting.sc_workflow)
     workflow_state_id = workflow_state["id"]
 
     gh_user_name = issue["user"]["login"]
