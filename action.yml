@@ -4,9 +4,6 @@ inputs:
   github_token:
     description: "github token"
     required: true
-  github_repo_name:
-    description: "github repo name (owner/repo)"
-    required: true
   github_issue_number:
     description: "number of the issue created"
     required: true

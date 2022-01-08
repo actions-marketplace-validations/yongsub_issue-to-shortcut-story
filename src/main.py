@@ -12,8 +12,11 @@ class Setting(BaseSettings):
     Env variables
     """
 
+    """Provided by Github """
+    gh_repo_name: str = Field(env="GITHUB_REPOSITORY")
+
+    """Provided by User"""
     gh_token: str = Field(env="INPUT_GITHUB_TOKEN")
-    gh_repo_name: str = Field(env="INPUT_GITHUB_REPO_NAME")
     gh_issue_num: str = Field(env="INPUT_GITHUB_ISSUE_NUMBER")
     sc_api_token: str = Field(env="INPUT_SHORTCUT_API_TOKEN")
     sc_default_user_name: str = Field(env="INPUT_SHORTCUT_DEFAULT_USER_NAME")
