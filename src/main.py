@@ -1,6 +1,6 @@
 import sys
+import os
 import requests
-from pprint import pprint
 from typing import Optional
 from pydantic import BaseSettings, Field
 from shortcut import Shortcut
@@ -113,6 +113,7 @@ if __name__ == "__main__":
     setting = Setting()
 
     print(setting)
+    print("*******", os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_ACTIONS"])
 
     sc = Shortcut(setting.sc_api_token)
 
