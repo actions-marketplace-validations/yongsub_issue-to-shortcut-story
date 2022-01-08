@@ -19,7 +19,7 @@ jobs:
         uses: yongsub/issue-to-shortcut-story@v0.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_repo_name: $REPO_NAME
+          github_repo_name: ${{ github.event.repo.name }}
           github_issue_number: ${{ github.event.issue.number }}
           shortcut_api_token: ${{ secrets.SHORTCUT_API_TOKEN }}
           shortcut_default_user_name: $SHORTCUT_USER_NAME
@@ -34,7 +34,7 @@ jobs:
     - Used to request Github API.
     - Recommended to use `${{ secrets.GITHUB_TOKEN }}` in your workflow.
 - `github_repo_name`
-    - Format: `"{OWNER}/{REPO}"`
+    - Recommended to use `${{ github.event.repo.name }}` in your workflow.
 - `github_issue_number`
     - Number of the issue just created.
     - Recommended to use `${{ github.event.issue.number }}` in your workflow.
