@@ -52,7 +52,7 @@ jobs:
 - `gh_sc_user_map`, optional
     - Map from Github users to Shortcut users in JSON.
         - Example:
-            ```json
+            ```
             '{"gh_user1": "sc_user1", "gh_user2": "sc_user2"}'
             ```
         - "name", "mention name", and "email address" can be used to specify Shortcut user.
@@ -61,7 +61,7 @@ jobs:
 - `gh_action_sc_state_map`, optional
     - Map from action triggers to Shortcut workflow states in JSON.
         - Example:
-            ```json
+            ```
             '{"opened": "Unscheduled", "closed": "Completed"}'
             ``` 
     - For the following states, default values will be used if not specified.
