@@ -1,165 +1,202 @@
-import sys
-import os
-import requests
-from typing import Optional
-from pydantic import BaseSettings, Field
+import re
+from typing import Dict, Optional
+from pydantic import BaseSettings, BaseModel, Field
+from github import Github
 from shortcut import Shortcut
-from story import Story
 
 
-class Setting(BaseSettings):
+class Environ(BaseSettings):
     """
     Env variables
     """
 
     """Provided by Github """
-    gh_repo_name: str = Field(env="GITHUB_REPOSITORY")
+    gh_repo_name: str = Field(env="INPUT_GITHUB_REPOSITORY")
+    gh_event_name: str = Field(env="INPUT_GITHUB_EVENT_NAME")
+    gh_event_action: str = Field(env="INPUT_GITHUB_EVENT_ACTION")
 
     """Provided by User"""
     gh_token: str = Field(env="INPUT_GITHUB_TOKEN")
-    gh_issue_num: str = Field(env="INPUT_GITHUB_ISSUE_NUMBER")
+    gh_issue_num: int = Field(env="INPUT_GITHUB_ISSUE_NUMBER")
     sc_api_token: str = Field(env="INPUT_SHORTCUT_API_TOKEN")
     sc_default_user_name: str = Field(env="INPUT_SHORTCUT_DEFAULT_USER_NAME")
     sc_workflow: str = Field(env="INPUT_SHORTCUT_WORKFLOW")
     sc_team: Optional[str] = Field(env="INPUT_SHORTCUT_TEAM")
     sc_project: Optional[str] = Field(env="INPUT_SHORTCUT_PROJECT")
-    gh_sc_user_map: Optional[str] = Field(env="INPUT_GH_SC_USER_MAP")
+    gh_sc_user_map: Optional[Dict[str, str]] = Field(env="INPUT_GH_SC_USER_MAP")
+    gh_action_sc_state_map: Optional[Dict[str, str]] = Field(env="INPUT_GH_ACTION_SC_STATE_MAP")
 
 
-def determine_workflow_state(sc, workflow_name):
-    workflow = sc.get_workflow(workflow_name)
+class Setting(BaseModel):
+    environ: Environ
+    sc_workflow_state_id: int
+    sc_group_id: Optional[str]
+    sc_project_id: Optional[int]
+    sc_default_user_id: str
+    gh_sc_id_map: Dict[str, str]
+    gh_action_sc_state_id_map: Dict[str, str]
 
-    assert workflow is not None, f"Workflow {workflow_name} does not exist."
-    assert len(workflow["states"]) > 0, f"Workflow {workflow_name} has no state."
 
-    target_state = workflow["states"][0]
+def make_story_spec(issue, setting):
+    gh_user_name = issue.user.login
+    requested_by_id = setting.gh_sc_id_map.get(gh_user_name, setting.sc_default_user_id)
 
-    return target_state
+    issue_url = issue.html_url
+    story_body = f"Automatically created by [this issue]({issue_url})"
 
-
-def get_issue(gh_issue_num, gh_repo_name, gh_token):
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        "Authorization": f"token {gh_token}",
+    story_spec = {
+        "name": issue.title,
+        "description": story_body,
+        "requested_by_id": requested_by_id,
+        "group_id": setting.sc_group_id,
+        "workflow_state_id": setting.sc_workflow_state_id,
+        "project_id": setting.sc_project_id,
     }
-    url = f"https://api.github.com/repos/{gh_repo_name}/issues/{gh_issue_num}"
 
-    print(f">>> Issue {gh_issue_num} ({type(gh_issue_num)}) is created")
-    print(f">>>   - Request {url}")
-
-    res = requests.get(url=url, headers=headers)
-
-    try:
-        res.raise_for_status()
-
-    except requests.exceptions.HTTPError as ex:
-        print(ex)
-        # if not 200
-        print(res.status_code)
-        print(res.json())
-        print("github token or github relevant inputs are invalid")
-        sys.exit(1)
-
-    return res.json()
+    return story_spec
 
 
-def parse_to_user_map(gh_sc_user_map_str):
-    try:
-        mappings = gh_sc_user_map_str.split(",")
-        mappings = [m.strip() for m in mappings]
-        mappings = [m for m in mappings if m != ""]
+def make_story_link_text(story):
+    story_id = story["id"]
+    story_url = story["app_url"]
 
-        user_map = dict([pair.split(":") for pair in mappings])
-    except Exception:
-        print(">>> Parsing gh_sc_user_map failed.")
-        user_map = None
+    story_hyperlink = f"[sc-{story_id}]({story_url})"
+    issue_comment = f":link: Linked to [{story_hyperlink}] (automatically added by issue-to-shortcut-story)"
 
-    return user_map
+    return issue_comment
 
 
-def determine_requested_by_id(sc, gh_user_name, gh_sc_user_map_str, sc_default_user_name):
-    sc_default_user_id = sc.get_member_id(sc_default_user_name)
+def get_linked_story_id(issue):
+    comments = issue.get_comments()
+
+    story_id = None
+
+    for comment in comments:
+        patterns = re.findall(r"\[sc-[1-9][0-9]*\]", comment.body)
+
+        if len(patterns) > 0:
+            story_id = int(patterns[0][4:-1])
+            break
+
+    if story_id is None:
+        raise Exception("Any associated story cannot be found in `issue`.")
+
+    return story_id
+
+
+def make_story_meta(issue, setting):
+    story_owner_ids = []
+    for gh_user in issue.assignees:
+        gh_name = gh_user.login
+        sc_id = setting.gh_sc_id_map[gh_name]
+
+        if sc_id not in story_owner_ids:
+            story_owner_ids.append(sc_id)
+
+    gh_action_sc_state_id_map = setting.gh_action_sc_state_id_map
+    workflow_state_id = gh_action_sc_state_id_map.get(setting.environ.gh_event_action, None)
+
+    story_meta = {"name": issue.title}
+
+    if len(story_owner_ids) > 0:
+        story_meta["owner_ids"] = story_owner_ids
+
+    if workflow_state_id is not None:
+        story_meta["workflow_state_id"] = workflow_state_id
+
+    return story_meta
+
+
+def make_setting(environ, shortcut):
+    sc_workflow = shortcut.get_workflow(environ.sc_workflow)
+
+    assert sc_workflow is not None
+
+    sc_workflow_state_id = sc_workflow["states"][0]["id"]
+    sc_group_id = shortcut.get_group_id(environ.sc_team)
+    sc_project_id = shortcut.get_project_id(environ.sc_project)
+    sc_default_user_id = shortcut.get_member_id(environ.sc_default_user_name)
 
     assert sc_default_user_id is not None
 
-    gh_sc_user_map = parse_to_user_map(gh_sc_user_map_str)
-
-    if gh_sc_user_map is None:
-        print(f">>> github-shortcut user map is not given ({gh_sc_user_map_str}).")
-        print(f">>>   - Default shortcut user ({sc_default_user_name}) is used for requested by of a story.")
-        requested_by_id = sc_default_user_id
-
-    elif gh_user_name in gh_sc_user_map:
-        sc_user_name = gh_sc_user_map[gh_user_name]
-        sc_user_id = sc.get_member_id(sc_user_name)
-
-        if sc_user_id is None:
-            print(f">>> Shortcut user {sc_user_name} cannot be found.")
-            print(f">>>   - Default Shortcut user ({sc_default_user_name}) will be used to set `requested_by_id`.")
-            requested_by_id = sc_default_user_id
-        else:
-            print(f">>> Shortcut user {sc_user_name} is found.")
-            requested_by_id = sc_user_id
-
+    if environ.gh_sc_user_map is None:
+        gh_sc_id_map = {}
     else:
-        print(f">>> Github user {gh_user_name} has no associated Shortcut user.")
-        print(f">>>   - Default Shortcut user ({sc_default_user_name}) will be used to set `requested_by_id`.")
-        requested_by_id = sc_default_user_id
+        gh_sc_id_map = {
+            gh_user_name: shortcut.get_member_id(sc_user_name)
+            for gh_user_name, sc_user_name in environ.gh_sc_user_map.items()
+        }
 
-    return requested_by_id
+        gh_sc_id_map = {k: v for k, v in gh_sc_id_map.items() if v is not None}
+
+    if environ.gh_action_sc_state_map is None:
+        gh_action_sc_state_id_map = {}
+    else:
+        workflow_state_name_id_map = {
+            state["name"]: state["id"]
+            for state in sc_workflow["states"]
+        }
+
+        gh_action_sc_state_id_map = {
+            gh_action: workflow_state_name_id_map[sc_state]
+            for gh_action, sc_state in environ.gh_action_sc_state_map.items()
+        }
+
+    gh_action_sc_state_id_map.setdefault("opened", sc_workflow["states"][0]["id"])
+    gh_action_sc_state_id_map.setdefault("reopened", sc_workflow["states"][0]["id"])
+    gh_action_sc_state_id_map.setdefault("closed", sc_workflow["states"][-1]["id"])
+
+    setting = Setting(
+        environ=environ,
+        sc_workflow_state_id=sc_workflow_state_id,
+        sc_group_id=sc_group_id,
+        sc_project_id=sc_project_id,
+        sc_default_user_id=sc_default_user_id,
+        gh_sc_id_map=gh_sc_id_map,
+        gh_action_sc_state_id_map=gh_action_sc_state_id_map,
+    )
+
+    return setting
+
+
+def main():
+    environ = Environ()
+
+    if environ.gh_event_name != "issue":
+        print("event_name is not issue. Action issue-to-shortcut-story does nothing.")
+        exit(0)
+
+    print(environ.dict())
+
+    github = Github(environ.gh_token)
+    shortcut = Shortcut(environ.sc_api_token)
+
+    repo = github.get_repo(environ.gh_repo_name)
+    issue = repo.get_issue(environ.gh_issue_num)
+
+    setting = make_setting(environ, shortcut)
+
+    if setting.environ.gh_event_action == "opened":
+        story_spec = make_story_spec(issue, setting)
+        story = shortcut.create_story(story_spec)
+
+        print(">>> Story is created.")
+        print(f"  - id: {story['id']}.")
+        print(f"  - title: {story['name']}.")
+
+        comment = make_story_link_text(story)
+        issue.create_comment(comment)
+
+    story_id = get_linked_story_id(issue)
+    story = shortcut.get_story(story_id)
+
+    story_meta = make_story_meta(issue, setting)
+    shortcut.update_story(story_id, story_meta)
+
+    print(">>> Storyy is updated.")
+    for k, v in story_meta.items():
+        print(f"  - {k}: {v}")
 
 
 if __name__ == "__main__":
-    setting = Setting()
-
-    print(setting)
-    print("*******", os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_ACTIONS"])
-
-    sc = Shortcut(setting.sc_api_token)
-
-    issue = get_issue(setting.gh_issue_num, setting.gh_repo_name, setting.gh_token)
-
-    workflow_state = determine_workflow_state(sc, setting.sc_workflow)
-    workflow_state_id = workflow_state["id"]
-
-    gh_user_name = issue["user"]["login"]
-    requested_by_id = determine_requested_by_id(
-        sc,
-        gh_user_name,
-        setting.gh_sc_user_map,
-        setting.sc_default_user_name,
-    )
-
-    group_id = sc.get_group_id(setting.sc_team)
-    project_id = sc.get_project_id(setting.sc_project)
-
-    issue_url = f"https://github.com/{setting.gh_repo_name}/issues/{setting.gh_issue_num}"
-    story_body = f"Automatically created by [this issue]({issue_url})"
-
-    story = Story(
-        name=issue["title"],
-        description=story_body,
-        requested_by_id=requested_by_id,
-        group_id=group_id,
-        workflow_state_id=workflow_state_id,
-        project_id=project_id,
-    )
-
-    print(story)
-
-    r = sc.create_story(story)
-
-    try:
-        r.raise_for_status()
-
-        story_id = r.json()["id"]
-
-        print(f">>> Story {story_id} is created.")
-
-    except requests.exceptions.HTTPError as ex:
-        print(ex)
-        # if not 200
-        print(r.status_code)
-        print(r.json())
-        print("Story creation failed.")
-        sys.exit(1)
+    main()

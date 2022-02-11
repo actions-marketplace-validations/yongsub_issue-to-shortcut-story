@@ -1,6 +1,6 @@
 # issue-to-shortcut-story
 
-Action to automatically create a Shrotcut story whenever an issue is created.
+Action to automatically create a Shrotcut story whenever an issue is created and synchronize their states whenever the state of the issue is changed.
 
 ## Workflow example
 
@@ -9,14 +9,14 @@ name: "Issue to Shortcut Story"
 
 on: 
   issues:
-    types: [opened]
+    types: [opened, reopened, edited, closed]
 
 jobs:
   issue-story-linking:
     runs-on: ubuntu-latest
     steps:
       - name: "story-creation"
-        uses: yongsub/issue-to-shortcut-story@v0.0.1
+        uses: yongsub/issue-to-shortcut-story@v0.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           github_issue_number: ${{ github.event.issue.number }}
@@ -25,7 +25,8 @@ jobs:
           shortcut_workflow: $SHORTCUT_WORKFLOW_NAME
           shortcut_group: $SHORTCUT_GROUP_NAME  # optional
           shortcut_project: $SHORTCUT_PROJECT_NAME # optional
-          gh_sc_user_map: $ID_MAP # optional
+          gh_sc_user_map: $ID_MAP  # optional
+          gh_action_sc_state_map: $ACTION_STATE_MAP  # optional
 ```
 
 ## Parameters
@@ -49,13 +50,25 @@ jobs:
 - `shortcut_project`, optional
     - Shortcut project that the story belongs.
 - `gh_sc_user_map`, optional
-    - Map from Github users to Shortcut users.
-        - Format: `"gh_user1:sc_user1, gh_user2:sc_user2"`
-            - Comma (,) separates mapping items and colon (:) separates a key-value pair.
-            - No space is allowed before and after colon (:).
+    - Map from Github users to Shortcut users in JSON.
+        - Example:
+            ```json
+            '{"gh_user1": "sc_user1", "gh_user2": "sc_user2"}'
+            ```
         - "name", "mention name", and "email address" can be used to specify Shortcut user.
-          - Recommended to use "email address" because the others are editable in Shortcut.
     - If specified, the Shortcut user corresponding to the Github user who created the issue will be "Requester" of the story.
     - If not specified, `shortcut_default_user_name` will be "Requester".
+- `gh_action_sc_state_map`, optional
+    - Map from action triggers to Shortcut workflow states in JSON.
+        - Example:
+            ```json
+            '{"opened": "Unscheduled", "closed": "Completed"}'
+            ``` 
+    - For the following states, default values will be used if not specified.
+        - "opened": first state of the workflow specified above
+        - "reopened": the same as "opened"
+        - "closed": last state of the workflow specified above
+        - For the others, the current workflow state remain unchanged.
+
 
 

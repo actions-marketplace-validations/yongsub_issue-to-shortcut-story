@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 
 
-class Story(BaseModel):
+class StorySpec(BaseModel):
     # required
     name: str
     description: Optional[str] = None

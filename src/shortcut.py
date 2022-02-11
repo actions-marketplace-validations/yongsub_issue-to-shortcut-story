@@ -1,7 +1,10 @@
+from typing import Any, Dict
+
 import arrow
+import json
 import os
 import requests
-from story import Story
+from story import StorySpec
 
 
 class Shortcut:
@@ -23,11 +26,12 @@ class Shortcut:
         headers["Shortcut-Token"] = self._api_key
         return headers
 
-    def get(self, name):
+    def get(self, name, *args):
         shortcut_api_headers = self.get_api_headers()
+        url = "/".join([self.SHORTCUT_API_BASE_URL, name, *args])
 
         resp = requests.get(
-            url=f"{self.SHORTCUT_API_BASE_URL}/{name}",
+            url=url,
             headers=shortcut_api_headers,
         )
 
@@ -40,6 +44,10 @@ class Shortcut:
             exit(1)
 
         return resp
+
+    def get_story(self, story_id):
+        obj = self.get("stories", str(story_id))
+        return obj.json()
 
     def get_member(
         self,
@@ -105,21 +113,60 @@ class Shortcut:
         else:
             return None
 
-    def create_story(self, story: Story):
-        if story.requested_by_id is None:
-            my_id = self.get_my_id()
-            story.requested_by_id = my_id
+    def create_story(self, story_spec: Dict[str, Any]):
+        assert "name" in story_spec
+        assert "description" in story_spec
+        assert "workflow_state_id" in story_spec
 
-        if story.created_at is None:
+        story_spec.setdefault("requested_by_id", None)
+        story_spec.setdefault("created_at", None)
+
+        if story_spec["requested_by_id"] is None:
+            my_id = self.get_my_id()
+            story_spec.requested_by_id = my_id
+
+        if story_spec["created_at"] is None:
             curr = arrow.now().isoformat()
-            story.created_at = curr
-            story.completed_at_override = curr
-            story.started_at_override = curr
-            story.updated_at = curr
+            story_spec.created_at = curr
+            story_spec.completed_at_override = curr
+            story_spec.started_at_override = curr
+            story_spec.updated_at = curr
 
         url = self.SHORTCUT_API_BASE_URL + "/stories"
         headers = self.SHORTCUT_API_HEADERS
 
-        response = requests.post(url=url, headers=headers, data=story.json())
+        r = requests.post(url=url, headers=headers, data=story_spec)
 
-        return response
+        try:
+            r.raise_for_status()
+
+        except requests.exceptions.HTTPError as ex:
+            print(ex)
+            # if not 200
+            print(r.status_code)
+            print(r.json())
+            print("Story creation failed.")
+            raise
+
+        return r.json()
+
+    def update_story(self, story_id: int, story_spec: Dict[str, Any]):
+        url = f"{self.SHORTCUT_API_BASE_URL}/stories/{story_id}"
+        headers = self.SHORTCUT_API_HEADERS
+
+        # print(story_spec)
+        # return
+        r = requests.put(url=url, headers=headers, data=json.dumps(story_spec))
+
+        try:
+            r.raise_for_status()
+
+        except requests.exceptions.HTTPError as ex:
+            print(ex)
+            # if not 200
+            print(r.status_code)
+            print(r.json())
+            print("Story update failed.")
+            raise
+
+        return r.json()
