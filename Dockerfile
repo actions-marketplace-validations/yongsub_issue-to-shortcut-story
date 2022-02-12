@@ -6,7 +6,6 @@ COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 COPY src/main.py main.py
-COPY src/story.py story.py
 COPY src/shortcut.py shortcut.py
 
 CMD ["python", "/app/main.py"]
