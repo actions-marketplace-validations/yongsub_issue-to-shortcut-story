@@ -99,12 +99,10 @@ def make_story_meta(issue, setting):
     gh_action_sc_state_id_map = setting.gh_action_sc_state_id_map
     workflow_state_id = gh_action_sc_state_id_map.get(setting.gh_event_action, None)
 
-    story_meta = {"name": issue.title}
-
-    if len(story_owner_ids) > 0:
-        story_meta["owner_ids"] = story_owner_ids
-    else:
-        story_meta["owner_ids"] = None
+    story_meta = {
+        "name": issue.title,
+        "owner_ids": story_owner_ids,
+    }
 
     if workflow_state_id is not None:
         story_meta["workflow_state_id"] = workflow_state_id
