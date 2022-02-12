@@ -1,4 +1,6 @@
 import re
+import json
+from pprint import pprint
 from typing import Dict, Optional
 from pydantic import BaseSettings, BaseModel, Field
 from github import Github
@@ -11,13 +13,11 @@ class Environ(BaseSettings):
     """
 
     """Provided by Github """
-    gh_repo_name: str = Field(env="INPUT_GITHUB_REPOSITORY")
     gh_event_name: str = Field(env="INPUT_GITHUB_EVENT_NAME")
-    gh_event_action: str = Field(env="INPUT_GITHUB_EVENT_ACTION")
+    gh_event_path: str = Field(env="INPUT_GITHUB_EVENT_PATH")
 
     """Provided by User"""
     gh_token: str = Field(env="INPUT_GITHUB_TOKEN")
-    gh_issue_num: int = Field(env="INPUT_GITHUB_ISSUE_NUMBER")
     sc_api_token: str = Field(env="INPUT_SHORTCUT_API_TOKEN")
     sc_default_user_name: str = Field(env="INPUT_SHORTCUT_DEFAULT_USER_NAME")
     sc_workflow: str = Field(env="INPUT_SHORTCUT_WORKFLOW")
@@ -29,6 +29,9 @@ class Environ(BaseSettings):
 
 class Setting(BaseModel):
     environ: Environ
+    gh_event_action: str
+    gh_issue_number: int
+    gh_repo_name: str
     sc_workflow_state_id: int
     sc_group_id: Optional[str]
     sc_project_id: Optional[int]
@@ -94,7 +97,7 @@ def make_story_meta(issue, setting):
             story_owner_ids.append(sc_id)
 
     gh_action_sc_state_id_map = setting.gh_action_sc_state_id_map
-    workflow_state_id = gh_action_sc_state_id_map.get(setting.environ.gh_event_action, None)
+    workflow_state_id = gh_action_sc_state_id_map.get(setting.gh_event_action, None)
 
     story_meta = {"name": issue.title}
 
@@ -108,6 +111,13 @@ def make_story_meta(issue, setting):
 
 
 def make_setting(environ, shortcut):
+    with open(environ.gh_event_path, "r") as f:
+        event = json.load(f)
+
+    gh_event_action = event["action"]
+    gh_issue_number = event["issue"]["number"]
+    gh_repo_name = event["repository"]["full_name"]
+
     sc_workflow = shortcut.get_workflow(environ.sc_workflow)
 
     assert sc_workflow is not None
@@ -148,6 +158,9 @@ def make_setting(environ, shortcut):
 
     setting = Setting(
         environ=environ,
+        gh_event_action=gh_event_action,
+        gh_issue_number=gh_issue_number,
+        gh_repo_name=gh_repo_name,
         sc_workflow_state_id=sc_workflow_state_id,
         sc_group_id=sc_group_id,
         sc_project_id=sc_project_id,
@@ -171,12 +184,15 @@ def main():
     github = Github(environ.gh_token)
     shortcut = Shortcut(environ.sc_api_token)
 
-    repo = github.get_repo(environ.gh_repo_name)
-    issue = repo.get_issue(environ.gh_issue_num)
-
     setting = make_setting(environ, shortcut)
 
-    if setting.environ.gh_event_action == "opened":
+    issue = (
+        github
+        .get_repo(setting.gh_repo_name)
+        .get_issue(setting.gh_issue_number)
+    )
+
+    if setting.gh_event_action == "opened":
         story_spec = make_story_spec(issue, setting)
         story = shortcut.create_story(story_spec)
 

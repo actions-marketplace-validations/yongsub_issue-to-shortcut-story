@@ -122,19 +122,19 @@ class Shortcut:
 
         if story_spec["requested_by_id"] is None:
             my_id = self.get_my_id()
-            story_spec.requested_by_id = my_id
+            story_spec["requested_by_id"] = my_id
 
         if story_spec["created_at"] is None:
             curr = arrow.now().isoformat()
-            story_spec.created_at = curr
-            story_spec.completed_at_override = curr
-            story_spec.started_at_override = curr
-            story_spec.updated_at = curr
+            story_spec["created_at"] = curr
+            story_spec["completed_at_override"] = curr
+            story_spec["started_at_override"] = curr
+            story_spec["updated_at"] = curr
 
         url = self.SHORTCUT_API_BASE_URL + "/stories"
         headers = self.SHORTCUT_API_HEADERS
 
-        r = requests.post(url=url, headers=headers, data=story_spec)
+        r = requests.post(url=url, headers=headers, data=json.dumps(story_spec))
 
         try:
             r.raise_for_status()
