@@ -9,7 +9,7 @@ name: "Issue to Shortcut Story"
 
 on: 
   issues:
-    types: [opened, reopened, edited, closed]
+    types: [opened, reopened, edited, assigned, unassigned, closed]
 
 jobs:
   issue-story-linking:
