@@ -4,7 +4,6 @@ import arrow
 import json
 import os
 import requests
-from story import StorySpec
 
 
 class Shortcut:
