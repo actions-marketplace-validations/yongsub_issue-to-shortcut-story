@@ -13,8 +13,8 @@ class Environ(BaseSettings):
     """
 
     """Provided by Github """
-    gh_event_name: str = Field(env="INPUT_GITHUB_EVENT_NAME")
-    gh_event_path: str = Field(env="INPUT_GITHUB_EVENT_PATH")
+    gh_event_name: str = Field(env="GITHUB_EVENT_NAME")
+    gh_event_path: str = Field(env="GITHUB_EVENT_PATH")
 
     """Provided by User"""
     gh_token: str = Field(env="INPUT_GITHUB_TOKEN")
