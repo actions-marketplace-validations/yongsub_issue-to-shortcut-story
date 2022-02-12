@@ -91,7 +91,7 @@ def make_story_meta(issue, setting):
     story_owner_ids = []
     for gh_user in issue.assignees:
         gh_name = gh_user.login
-        sc_id = setting.gh_sc_id_map.get(gh_name, setting.environ.sc_default_user_name)
+        sc_id = setting.gh_sc_id_map.get(gh_name, setting.sc_default_user_id)
 
         if sc_id not in story_owner_ids:
             story_owner_ids.append(sc_id)
