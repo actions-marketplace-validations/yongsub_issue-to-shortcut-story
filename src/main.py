@@ -175,7 +175,7 @@ def make_setting(environ, shortcut):
 def main():
     environ = Environ()
 
-    if environ.gh_event_name != "issue":
+    if environ.gh_event_name != "issues":
         print("event_name is not issue. Action issue-to-shortcut-story does nothing.")
         exit(0)
 
