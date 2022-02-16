@@ -1,10 +1,13 @@
 import re
 import json
-from pprint import pprint
 from typing import Dict, Optional
 from pydantic import BaseSettings, BaseModel, Field
 from github import Github
 from shortcut import Shortcut
+
+
+class StoryNotFound(Exception):
+    pass
 
 
 class Environ(BaseSettings):
@@ -203,15 +206,21 @@ def main():
         comment = make_story_link_text(story)
         issue.create_comment(comment)
 
-    story_id = get_linked_story_id(issue)
-    story = shortcut.get_story(story_id)
+    try:
+        story_id = get_linked_story_id(issue)
+        story = shortcut.get_story(story_id)
 
-    story_meta = make_story_meta(issue, setting)
-    shortcut.update_story(story_id, story_meta)
+        story_meta = make_story_meta(issue, setting)
+        shortcut.update_story(story_id, story_meta)
 
-    print(">>> Storyy is updated.")
-    for k, v in story_meta.items():
-        print(f"  - {k}: {v}")
+        print(">>> Storyy is updated.")
+        for k, v in story_meta.items():
+            print(f"  - {k}: {v}")
+    except StoryNotFound:
+        print(f">>> Any linked story cannot be found in the issue ({issue.number})")
+    except Exception:
+        print(">>> Action failed.")
+        raise
 
 
 if __name__ == "__main__":
