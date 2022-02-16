@@ -100,7 +100,7 @@ def make_story_meta(issue, setting):
     workflow_state_id = gh_action_sc_state_id_map.get(setting.gh_event_action, None)
 
     story_meta = {
-        "name": issue.title,
+        "name": "[Github Issue] " + issue.title,
         "owner_ids": story_owner_ids,
     }
 
