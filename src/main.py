@@ -85,7 +85,7 @@ def get_linked_story_id(issue):
             break
 
     if story_id is None:
-        raise Exception("Any associated story cannot be found in `issue`.")
+        raise StoryNotFound("Any associated story cannot be found in `issue`.")
 
     return story_id
 
