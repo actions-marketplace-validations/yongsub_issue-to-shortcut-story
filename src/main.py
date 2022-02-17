@@ -132,7 +132,7 @@ def make_setting(environ, shortcut):
 
     assert sc_default_user_id is not None
 
-    if environ.gh_sc_user_map is None or environ.gh_sc_user_map == "":
+    if environ.gh_sc_user_map is None or environ.gh_sc_user_map.strip() == "":
         gh_sc_id_map = {}
     else:
         gh_sc_user_map = json.loads(environ.gh_sc_user_map)
@@ -143,7 +143,7 @@ def make_setting(environ, shortcut):
 
         gh_sc_id_map = {k: v for k, v in gh_sc_id_map.items() if v is not None}
 
-    if environ.gh_action_sc_state_map is None or environ.gh_action_sc_state_map == "":
+    if environ.gh_action_sc_state_map is None or environ.gh_action_sc_state_map.strip() == "":
         gh_action_sc_state_id_map = {}
     else:
         workflow_state_name_id_map = {
