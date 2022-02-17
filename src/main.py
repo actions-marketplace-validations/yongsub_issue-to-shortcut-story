@@ -26,8 +26,8 @@ class Environ(BaseSettings):
     sc_workflow: str = Field(env="INPUT_SHORTCUT_WORKFLOW")
     sc_team: Optional[str] = Field(env="INPUT_SHORTCUT_TEAM")
     sc_project: Optional[str] = Field(env="INPUT_SHORTCUT_PROJECT")
-    gh_sc_user_map: Optional[Dict[str, str]] = Field(env="INPUT_GH_SC_USER_MAP")
-    gh_action_sc_state_map: Optional[Dict[str, str]] = Field(env="INPUT_GH_ACTION_SC_STATE_MAP")
+    gh_sc_user_map: Optional[str] = Field(env="INPUT_GH_SC_USER_MAP")
+    gh_action_sc_state_map: Optional[str] = Field(env="INPUT_GH_ACTION_SC_STATE_MAP")
 
 
 class Setting(BaseModel):
@@ -135,9 +135,10 @@ def make_setting(environ, shortcut):
     if environ.gh_sc_user_map is None:
         gh_sc_id_map = {}
     else:
+        gh_sc_user_map = json.loads(environ.gh_sc_user_map)
         gh_sc_id_map = {
             gh_user_name: shortcut.get_member_id(sc_user_name)
-            for gh_user_name, sc_user_name in environ.gh_sc_user_map.items()
+            for gh_user_name, sc_user_name in gh_sc_user_map.items()
         }
 
         gh_sc_id_map = {k: v for k, v in gh_sc_id_map.items() if v is not None}
@@ -150,9 +151,10 @@ def make_setting(environ, shortcut):
             for state in sc_workflow["states"]
         }
 
+        gh_action_sc_state_map = json.loads(environ.gh_action_sc_state_map)
         gh_action_sc_state_id_map = {
             gh_action: workflow_state_name_id_map[sc_state]
-            for gh_action, sc_state in environ.gh_action_sc_state_map.items()
+            for gh_action, sc_state in gh_action_sc_state_map.items()
         }
 
     gh_action_sc_state_id_map.setdefault("opened", sc_workflow["states"][0]["id"])
