@@ -22,7 +22,7 @@ jobs:
           shortcut_api_token: ${{ secrets.SHORTCUT_API_TOKEN }}
           shortcut_default_user_name: $SHORTCUT_USER_NAME
           shortcut_workflow: $SHORTCUT_WORKFLOW_NAME
-          shortcut_group: $SHORTCUT_GROUP_NAME  # optional
+          shortcut_team: $SHORTCUT_TEAM_NAME  # optional
           shortcut_project: $SHORTCUT_PROJECT_NAME # optional
           gh_sc_user_map: $ID_MAP  # optional
           gh_action_sc_state_map: $ACTION_STATE_MAP  # optional
@@ -41,7 +41,7 @@ jobs:
     - Name of a Shortcut user that will become "Requester" of the created story when no Github-Shortcut user map is specified.
 - `shortcut_workflow`
     - Shortcut workflow that the story is created.
-- `shortcut_group`, optional
+- `shortcut_team`, optional
     - Shortcut team responsible for the story.
 - `shortcut_project`, optional
     - Shortcut project that the story belongs.
@@ -60,11 +60,11 @@ jobs:
             ```
             '{"opened": "Unscheduled", "closed": "Completed"}'
             ``` 
-    - For the following states, default values will be used if not specified.
+    - For the following event types, default values will be used if not specified.
         - "opened": first state of the workflow specified above
         - "reopened": the same as "opened"
         - "closed": last state of the workflow specified above
-        - For the others, the current workflow state remain unchanged.
+        - For the others, the current workflow state remains unchanged.
 
 
 
